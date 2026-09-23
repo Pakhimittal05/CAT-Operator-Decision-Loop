@@ -1,7 +1,13 @@
 import React, { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { fetchOperatorState, fetchOperatorHistory, fetchOperators } from '../api/client';
+import {
+  fetchOperatorState,
+  fetchOperatorHistory,
+  fetchOperators,
+  fetchTrainingRecommendations,
+  fetchIncidents,
+} from '../api/client';
 import { DeviationRadar } from '../components/DeviationRadar';
 
 export const OperatorProfile: React.FC = () => {
@@ -30,6 +36,18 @@ export const OperatorProfile: React.FC = () => {
   } = useQuery({
     queryKey: ['operatorHistory', operatorId, historyLimit],
     queryFn: () => fetchOperatorHistory(operatorId, historyLimit),
+  });
+
+  const { data: recommendations = [] } = useQuery({
+    queryKey: ['operatorRecommendations', operatorId],
+    queryFn: () => fetchTrainingRecommendations(operatorId),
+    enabled: operatorId > 0,
+  });
+
+  const { data: operatorIncidentsData } = useQuery({
+    queryKey: ['operatorIncidents', operatorId],
+    queryFn: () => fetchIncidents({ operator_id: operatorId, limit: 10 }),
+    enabled: operatorId > 0,
   });
 
   const currentOp = operators?.find((o) => o.id === operatorId);
@@ -97,9 +115,21 @@ export const OperatorProfile: React.FC = () => {
           </p>
         </div>
 
-        {/* Switcher dropdown */}
-        <div className="flex items-center gap-2">
-          <label className="text-xs text-slate-400 font-medium">Select Operator:</label>
+        {/* Switcher & Action Buttons */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={() => navigate('/simulate')}
+            className="px-3 py-1.5 bg-gradient-to-r from-amber-400 to-amber-500 hover:brightness-110 text-slate-950 font-bold text-xs rounded-lg shadow-sm transition-all flex items-center gap-1"
+          >
+            <span>⚡ Simulate Next Task</span>
+            <span>&rarr;</span>
+          </button>
+          <button
+            onClick={() => navigate('/coaching')}
+            className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-lg transition-colors"
+          >
+            Coaching Hub
+          </button>
           <select
             value={operatorId}
             onChange={(e) => navigate(`/operators/${e.target.value}`)}
@@ -247,6 +277,143 @@ export const OperatorProfile: React.FC = () => {
           </div>
           <div className="pt-3 border-t border-slate-800 text-[11px] text-slate-400">
             Calculated via shared <code className="text-amber-300 bg-slate-800 px-1 py-0.5 rounded font-mono">compute_deviation()</code> pipeline.
+          </div>
+        </div>
+      </div>
+
+      {/* Coaching Recommendations & Safety Context (Evidence-Based, Non-Causal) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Skill-Gap Coaching Recommendations */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-amber-400" />
+                  Targeted Coaching &amp; Training Recommendations
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Automated skill-gap pathways triggered when EWMA dimension score falls below 50.0.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
+                {recommendations.length} Active
+              </span>
+            </div>
+
+            {recommendations.length === 0 ? (
+              <div className="py-6 text-center text-slate-400 text-xs bg-slate-950/40 rounded-lg border border-slate-800/60 p-4">
+                <span className="text-emerald-400 font-bold block mb-1">✓ Optimal Skill Alignment</span>
+                All continuous dimensions are &ge; 50.0. No immediate coaching interventions recommended.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recommendations.map((rec) => (
+                  <div
+                    key={rec.id}
+                    className="p-3 bg-slate-950/70 border border-slate-800 rounded-lg text-xs space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="font-semibold text-slate-200 capitalize">
+                        {rec.dimension.replace('_', ' ')} Focus
+                      </span>
+                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/20 text-amber-300 font-bold uppercase">
+                        {rec.status}
+                      </span>
+                    </div>
+                    <div className="text-slate-300 font-medium text-[11px]">
+                      Module: {rec.elearning_module?.name || `${rec.dimension.replace('_', ' ')} Refresher`}
+                      {rec.elearning_module?.duration_minutes ? (
+                        <span className="text-slate-500 font-mono ml-1.5">
+                          ({rec.elearning_module.duration_minutes} min)
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="text-slate-400 text-[11px] leading-relaxed">
+                      {rec.reason}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-slate-800 flex items-center justify-between text-xs">
+            <span className="text-slate-400 text-[11px]">Personalized 1-on-1 Certified Instructor Coaching</span>
+            <button
+              onClick={() => navigate('/coaching')}
+              className="text-amber-400 hover:text-amber-300 font-semibold text-xs flex items-center gap-1"
+            >
+              <span>Book Instructor Session &rarr;</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Safety Incidents & Telemetry Context */}
+        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-5 flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3 mb-3">
+              <div>
+                <h3 className="text-sm font-bold text-slate-100 uppercase tracking-wider font-mono flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-rose-400" />
+                  Operator Safety &amp; Compliance Context
+                </h3>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Deterministic seatbelt &amp; proximity rule detections registered for this operator.
+                </p>
+              </div>
+              <span className="text-[10px] font-mono text-rose-400 bg-rose-500/10 border border-rose-500/20 px-2 py-0.5 rounded font-bold">
+                {operatorIncidentsData?.incidents.length || 0} Events
+              </span>
+            </div>
+
+            {(!operatorIncidentsData || operatorIncidentsData.incidents.length === 0) ? (
+              <div className="py-6 text-center text-slate-400 text-xs bg-slate-950/40 rounded-lg border border-slate-800/60 p-4">
+                <span className="text-emerald-400 font-bold block mb-1">✓ Zero Safety Violations</span>
+                Full compliance with seatbelt latching and proximity clearance buffers.
+              </div>
+            ) : (
+              <div className="space-y-2.5 max-h-[220px] overflow-y-auto pr-1">
+                {operatorIncidentsData.incidents.map((inc) => (
+                  <div
+                    key={inc.id}
+                    className="p-2.5 bg-slate-950/70 border border-slate-800 rounded-lg text-xs flex items-start justify-between gap-3"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded font-bold bg-slate-800 text-slate-300">
+                          {inc.source}
+                        </span>
+                        <span
+                          className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded font-bold ${
+                            inc.severity === 'critical'
+                              ? 'bg-rose-500/20 text-rose-300'
+                              : inc.severity === 'high'
+                              ? 'bg-orange-500/20 text-orange-300'
+                              : 'bg-amber-500/20 text-amber-300'
+                          }`}
+                        >
+                          {inc.severity}
+                        </span>
+                      </div>
+                      <p className="text-slate-300 text-[11px] leading-tight">
+                        {inc.description || 'Safety rule triggered.'}
+                      </p>
+                    </div>
+                    <div className="text-[10px] text-slate-500 font-mono whitespace-nowrap text-right">
+                      {new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="pt-3 mt-3 border-t border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
+            <span>Safety compliance heavily weights into dynamic EWMA state (&alpha; = 0.20)</span>
+            <Link to="/" className="text-amber-400 hover:underline font-medium text-xs">
+              Live Feed &rarr;
+            </Link>
           </div>
         </div>
       </div>

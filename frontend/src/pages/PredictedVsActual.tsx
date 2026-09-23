@@ -111,7 +111,7 @@ export const PredictedVsActual: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded tracking-wide">
-              PILLAR 5
+              STEP 4: ACT &amp; COMPARE
             </span>
             <span className="text-xs font-mono text-amber-400">CLOSED-LOOP INTELLIGENCE</span>
           </div>
@@ -534,6 +534,38 @@ export const PredictedVsActual: React.FC = () => {
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* ── Step 5: Close the Loop CTA Banner ── */}
+          <div className="bg-gradient-to-r from-amber-500/10 via-slate-900 to-slate-900 border border-amber-500/30 p-4 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded font-black bg-emerald-400 text-slate-950 uppercase">
+                  Step 5: LEARN
+                </span>
+                <span className="text-xs font-mono text-slate-300 font-semibold">
+                  Operator State Recalibrated via Recency-Weighted EWMA
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
+                The decision loop is complete. Observed deviations have updated the operator's dynamic profile.
+                Explore targeted CAT E-Learning pathways or reserve 1-on-1 certified instructor coaching sessions.
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => navigate('/coaching')}
+                className="px-4 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:brightness-110 text-slate-950 font-bold text-xs rounded-lg shadow-md transition-all flex items-center gap-1.5"
+              >
+                <span>View Targeted Coaching &rarr;</span>
+              </button>
+              <button
+                onClick={() => navigate('/simulate')}
+                className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-lg transition-colors"
+              >
+                Simulate Another Task
+              </button>
             </div>
           </div>
         </div>

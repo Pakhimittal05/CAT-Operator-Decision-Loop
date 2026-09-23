@@ -6,6 +6,8 @@ import {
   fetchOperators,
   fetchIncidents,
   fetchIncidentStats,
+  fetchAnomalies,
+  fetchInstructorSlots,
   createIncident,
   IncidentSeverity,
   IncidentSource,
@@ -55,6 +57,16 @@ export const Dashboard: React.FC = () => {
   const { data: incidentStats } = useQuery({
     queryKey: ['incidentStats'],
     queryFn: fetchIncidentStats,
+  });
+
+  const { data: anomalySummary } = useQuery({
+    queryKey: ['dashboardAnomalies'],
+    queryFn: () => fetchAnomalies({ limit: 5 }),
+  });
+
+  const { data: openSlots } = useQuery({
+    queryKey: ['dashboardSlots'],
+    queryFn: () => fetchInstructorSlots(true),
   });
 
   // Manual incident creation mutation
@@ -148,8 +160,40 @@ export const Dashboard: React.FC = () => {
         </div>
       </div>
 
+      {/* Closed-Loop Intelligence Command Banner */}
+      <div className="bg-gradient-to-r from-slate-900 via-slate-900/95 to-amber-950/20 border border-amber-500/20 p-4 rounded-xl flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-lg">
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="bg-amber-400 text-slate-950 font-black text-[10px] px-2 py-0.5 rounded tracking-wider uppercase">
+              Closed-Loop Workflow
+            </span>
+            <span className="text-xs font-mono text-amber-300 font-semibold">
+              Step 1: OBSERVE &amp; MONITOR SITE
+            </span>
+          </div>
+          <p className="text-xs text-slate-300 max-w-2xl leading-relaxed">
+            Monitor real-time task telemetry, compliance metrics, and safety incidents. Transition through the complete decision loop to simulate scenarios, execute field actuals, and close the loop with targeted coaching.
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Link
+            to="/simulate"
+            className="px-3.5 py-2 bg-gradient-to-r from-amber-400 to-amber-500 hover:brightness-110 text-slate-950 font-bold text-xs rounded-lg shadow-md transition-all flex items-center gap-1.5"
+          >
+            <span>⚡ Run What-If Simulation</span>
+            <span>&rarr;</span>
+          </Link>
+          <Link
+            to="/coaching"
+            className="px-3 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs rounded-lg transition-colors flex items-center gap-1.5"
+          >
+            <span>Coaching Hub ({openSlots?.length || 0} Slots)</span>
+          </Link>
+        </div>
+      </div>
+
       {/* Safety Compliance & KPI Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
           <div className="text-xs text-slate-400 font-medium">Recent Tasks Analyzed</div>
           <div className="text-2xl font-bold text-slate-100 mt-1">{compliance?.total_tasks || 0}</div>
@@ -201,6 +245,25 @@ export const Dashboard: React.FC = () => {
           <div className="text-[11px] text-slate-500 mt-1">
             Crit: {incidentStats?.by_severity?.critical || 0} | High: {incidentStats?.by_severity?.high || 0} | Med: {incidentStats?.by_severity?.medium || 0}
           </div>
+        </div>
+
+        <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4 flex flex-col justify-between">
+          <div>
+            <div className="text-xs text-slate-400 font-medium flex justify-between">
+              <span>Coaching &amp; Anomalies</span>
+              <span className="text-amber-400 font-bold">{anomalySummary?.total_count || 0} Alerts</span>
+            </div>
+            <div className="text-2xl font-bold text-amber-400 mt-1">
+              {openSlots?.length || 0}
+              <span className="text-xs font-normal text-slate-400 ml-1.5">open slots</span>
+            </div>
+          </div>
+          <Link
+            to="/coaching"
+            className="text-[11px] text-amber-400 hover:text-amber-300 font-semibold inline-flex items-center gap-1 mt-2"
+          >
+            <span>Review Coaching Hub &rarr;</span>
+          </Link>
         </div>
       </div>
 

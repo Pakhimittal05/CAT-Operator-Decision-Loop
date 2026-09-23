@@ -82,7 +82,7 @@ export const WhatIfSimulator: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded tracking-wide">
-              PILLAR 3
+              STEP 3: PREDICT
             </span>
             <span className="text-xs font-mono text-amber-400">WHAT-IF TASK SIMULATOR</span>
           </div>

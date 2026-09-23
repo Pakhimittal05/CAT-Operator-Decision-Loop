@@ -109,12 +109,13 @@ export const AnomalyFeed: React.FC = () => {
         <div>
           <div className="flex items-center gap-2 mb-1">
             <span className="bg-amber-400 text-slate-950 text-xs font-black px-2 py-0.5 rounded tracking-wide">
-              PHASE 6
+              STEP 5: LEARN
             </span>
-            <h1 className="text-xl font-bold text-slate-100 tracking-tight">
-              Anomaly Stream, Coaching & Training Hub
-            </h1>
+            <span className="text-xs font-mono text-amber-400">CLOSED-LOOP COACHING &amp; TRAINING</span>
           </div>
+          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">
+            Anomaly Stream, Coaching &amp; Training Hub
+          </h1>
           <p className="text-xs text-slate-400 max-w-2xl">
             Statistical deviation anomaly detection powered by shared reference models. Explanations
             are strictly framed as non-causal <strong className="text-slate-200">Probable Contributing Factors</strong>, mapped to targeted CAT E-Learning pathways and 1-on-1 instructor sessions.
