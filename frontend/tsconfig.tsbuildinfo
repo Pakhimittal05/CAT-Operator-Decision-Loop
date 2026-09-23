@@ -1,1 +1,1 @@
-{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/client.ts","./src/components/deviationradar.tsx","./src/components/syntheticdatabanner.tsx","./src/pages/dashboard.tsx","./src/pages/operatorprofile.tsx"],"version":"5.7.3"}
+{"root":["./src/app.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/client.ts","./src/components/deviationradar.tsx","./src/components/syntheticdatabanner.tsx","./src/pages/dashboard.tsx","./src/pages/operatorprofile.tsx","./src/pages/whatifsimulator.tsx"],"version":"5.7.3"}

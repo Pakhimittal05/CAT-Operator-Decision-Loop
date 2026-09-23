@@ -20,8 +20,10 @@ from fastapi.responses import JSONResponse
 
 from app.config import settings
 from app.deviation_engine.deviation import load_reference_artifacts
+from app.prediction.task_time_model import load_task_time_artifacts
 from app.routers.dashboard import router as dashboard_router
 from app.routers.operators import router as operators_router
+from app.routers.simulate import router as simulate_router
 
 logger = logging.getLogger("cat_decision_loop")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -35,12 +37,13 @@ async def lifespan(app: FastAPI):
     global _MODELS_LOADED
     try:
         load_reference_artifacts()
+        load_task_time_artifacts()
         _MODELS_LOADED = True
-        logger.info("Successfully loaded reference models and metadata at startup.")
+        logger.info("Successfully loaded reference and task-time models at startup.")
     except Exception as exc:
         logger.warning(
-            "Reference models could not be loaded at startup: %s. "
-            "Run 'python -m app.deviation_engine.reference_model' to generate artifacts.",
+            "Model artifacts could not be fully loaded at startup: %s. "
+            "Ensure training scripts have been run.",
             exc,
         )
         _MODELS_LOADED = False
@@ -107,6 +110,7 @@ async def handle_http_exception(request: Request, exc: HTTPException):
 # ── Routers ─────────────────────────────────────────────────────────────────
 app.include_router(operators_router)
 app.include_router(dashboard_router)
+app.include_router(simulate_router)
 
 
 @app.get("/health", tags=["system"])

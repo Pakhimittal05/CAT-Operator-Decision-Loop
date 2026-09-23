@@ -122,3 +122,89 @@ export const fetchDailyTasks = async (limit = 25): Promise<DashboardDailyTasksRe
   });
   return data;
 };
+
+// ── What-If Simulation (§12, §24) ──────────────────────────────────────────
+
+export interface ContributingFactor {
+  factor_name: string;
+  impact_direction: 'increases_duration' | 'decreases_duration';
+  impact_percentage: number;
+  confidence: number;
+  description: string;
+}
+
+export interface SimulationRequest {
+  operator_id: number;
+  machine_id: number;
+  task_type_id: number;
+  weather: string;
+}
+
+export interface SimulationResponse {
+  prediction_id: number;
+  operator_id: number;
+  operator_name: string;
+  machine_id: number;
+  machine_name: string;
+  task_type_id: number;
+  task_type_name: string;
+  weather: string;
+  predicted_duration_minutes: number;
+  p10_minutes: number;
+  p90_minutes: number;
+  uncertainty_range_minutes: number;
+  skill_fit_score: number;
+  skill_fit_label: string;
+  safety_risk_score: number;
+  safety_risk_level: 'low' | 'moderate' | 'elevated';
+  training_recommended: boolean;
+  training_reason?: string | null;
+  probable_factors: ContributingFactor[];
+  is_synthetic: boolean;
+  created_at: string;
+}
+
+export interface OperatorOption {
+  id: number;
+  name: string;
+  composite_score: number;
+  derived_label: string;
+}
+
+export interface MachineOption {
+  id: number;
+  name: string;
+  machine_type: string;
+  age_years: number;
+  wear_factor: number;
+}
+
+export interface TaskCatalogOption {
+  id: number;
+  name: string;
+  baseline_duration_minutes: number;
+  difficulty: number;
+}
+
+export interface SimulationOptionsResponse {
+  operators: OperatorOption[];
+  machines: MachineOption[];
+  tasks: TaskCatalogOption[];
+  weather_options: string[];
+  is_synthetic: boolean;
+}
+
+export const fetchSimulationOptions = async (): Promise<SimulationOptionsResponse> => {
+  const { data } = await apiClient.get<SimulationOptionsResponse>('/simulate/options');
+  return data;
+};
+
+export const runSimulation = async (payload: SimulationRequest): Promise<SimulationResponse> => {
+  const { data } = await apiClient.post<SimulationResponse>('/simulate/whatif', payload);
+  return data;
+};
+
+export const fetchPredictionExplanation = async (predictionId: number): Promise<any> => {
+  const { data } = await apiClient.get(`/models/explain/${predictionId}`);
+  return data;
+};
