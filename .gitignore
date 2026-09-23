@@ -28,3 +28,21 @@ Thumbs.db
 .env
 .env.*
 !.env.example
+
+
+# Frontend dependencies and build
+frontend/node_modules/
+frontend/dist/
+
+# IDE/editor files
+.vscode/
+.idea/
+
+# Environment/secrets
+.env
+.env.*
+!.env.example
+
+# Test/cache files
+.pytest_cache/
+.mypy_cache/
