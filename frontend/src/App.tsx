@@ -5,6 +5,7 @@ import { SyntheticDataBanner } from './components/SyntheticDataBanner';
 import { Dashboard } from './pages/Dashboard';
 import { OperatorProfile } from './pages/OperatorProfile';
 import { WhatIfSimulator } from './pages/WhatIfSimulator';
+import { AnomalyFeed } from './pages/AnomalyFeed';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -22,6 +23,7 @@ const Navigation: React.FC = () => {
     { to: '/', label: 'Operations Dashboard' },
     { to: '/operators/1', label: 'Operator Dynamic State' },
     { to: '/simulate', label: 'What-If Simulator' },
+    { to: '/coaching', label: 'Coaching & Training' },
   ];
 
   return (
@@ -44,6 +46,8 @@ const Navigation: React.FC = () => {
                     ? location.pathname === '/' || location.pathname === '/dashboard'
                     : link.to === '/simulate'
                     ? location.pathname === '/simulate'
+                    : link.to === '/coaching'
+                    ? location.pathname === '/coaching' || location.pathname === '/anomalies'
                     : location.pathname.startsWith('/operators');
                 return (
                   <Link
@@ -63,7 +67,7 @@ const Navigation: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-slate-400 hidden md:inline">
-              Hackathon Prototype — Phase 5
+              Hackathon Prototype — Phase 6
             </span>
             <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -95,6 +99,8 @@ export const App: React.FC = () => {
               <Route path="/operators" element={<OperatorProfile />} />
               <Route path="/operators/:id" element={<OperatorProfile />} />
               <Route path="/simulate" element={<WhatIfSimulator />} />
+              <Route path="/coaching" element={<AnomalyFeed />} />
+              <Route path="/anomalies" element={<AnomalyFeed />} />
             </Routes>
           </main>
 

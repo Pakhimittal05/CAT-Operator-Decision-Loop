@@ -275,3 +275,155 @@ export const evaluateTaskSafety = async (taskId: number): Promise<any> => {
   const { data } = await apiClient.post(`/safety/evaluate-task/${taskId}`);
   return data;
 };
+
+// ── Phase 6 Anomaly & Coaching / Training Types ────────────────────────────
+
+export interface ProbableContributingFactor {
+  dimension: string;
+  z_score: number;
+  contribution_weight_pct: number;
+  description: string;
+}
+
+export interface AnomalyItem {
+  id?: number | null;
+  task_instance_id: number;
+  operator_id: number;
+  operator_name: string;
+  machine_id?: number | null;
+  machine_name?: string | null;
+  composite_magnitude: number;
+  severity: string;
+  observed_pattern: string;
+  probable_factors: ProbableContributingFactor[];
+  created_at: string;
+  is_synthetic: boolean;
+}
+
+export interface AnomalyListResponse {
+  anomalies: AnomalyItem[];
+  total_count: number;
+  is_synthetic: boolean;
+}
+
+export interface TaskAnomalyEvaluationResponse {
+  task_instance_id: number;
+  is_anomaly: boolean;
+  composite_magnitude: number;
+  severity?: string | null;
+  observed_pattern?: string | null;
+  probable_factors: ProbableContributingFactor[];
+  incident_event_id?: number | null;
+  is_synthetic: boolean;
+}
+
+export interface ElearningModule {
+  id: number;
+  name: string;
+  dimension: string;
+  description?: string | null;
+  content_url?: string | null;
+  duration_minutes: number;
+  is_synthetic: boolean;
+}
+
+export interface TrainingRecommendation {
+  id: number;
+  operator_id: number;
+  operator_name?: string | null;
+  dimension: string;
+  elearning_module_id?: number | null;
+  elearning_module?: ElearningModule | null;
+  reason: string;
+  status: 'pending' | 'in_progress' | 'completed';
+  created_at: string;
+  is_synthetic: boolean;
+}
+
+export interface InstructorSlot {
+  id: number;
+  instructor_name: string;
+  slot_date: string;
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+  is_synthetic: boolean;
+}
+
+export interface BookingCreateRequest {
+  operator_id: number;
+  instructor_slot_id: number;
+  topic: string;
+}
+
+export interface InstructorBooking {
+  id: number;
+  operator_id: number;
+  operator_name?: string | null;
+  instructor_slot_id: number;
+  instructor_name?: string | null;
+  slot_date?: string | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  topic: string;
+  status: string;
+  created_at: string;
+  is_synthetic: boolean;
+}
+
+export const fetchAnomalies = async (params?: {
+  operator_id?: number;
+  severity?: string;
+  limit?: number;
+}): Promise<AnomalyListResponse> => {
+  const { data } = await apiClient.get<AnomalyListResponse>('/anomalies', { params });
+  return data;
+};
+
+export const detectTaskAnomaly = async (
+  taskId: number
+): Promise<TaskAnomalyEvaluationResponse> => {
+  const { data } = await apiClient.post<TaskAnomalyEvaluationResponse>(
+    `/anomalies/detect/${taskId}`
+  );
+  return data;
+};
+
+export const fetchTrainingRecommendations = async (
+  operatorId: number
+): Promise<TrainingRecommendation[]> => {
+  const { data } = await apiClient.get<TrainingRecommendation[]>(
+    `/training/recommendations/${operatorId}`
+  );
+  return data;
+};
+
+export const fetchElearningModules = async (): Promise<ElearningModule[]> => {
+  const { data } = await apiClient.get<ElearningModule[]>('/training/modules');
+  return data;
+};
+
+export const fetchInstructorSlots = async (
+  availableOnly: boolean = true
+): Promise<InstructorSlot[]> => {
+  const { data } = await apiClient.get<InstructorSlot[]>('/training/slots', {
+    params: { available_only: availableOnly },
+  });
+  return data;
+};
+
+export const createInstructorBooking = async (
+  payload: BookingCreateRequest
+): Promise<InstructorBooking> => {
+  const { data } = await apiClient.post<InstructorBooking>('/training/bookings', payload);
+  return data;
+};
+
+export const fetchOperatorBookings = async (
+  operatorId: number
+): Promise<InstructorBooking[]> => {
+  const { data } = await apiClient.get<InstructorBooking[]>(
+    `/training/bookings/${operatorId}`
+  );
+  return data;
+};

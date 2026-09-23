@@ -26,7 +26,9 @@ from app.routers.dashboard import router as dashboard_router
 from app.routers.incidents import router as incidents_router
 from app.routers.operators import router as operators_router
 from app.routers.simulate import router as simulate_router
+from app.routers.training import router as training_router
 from app.safety.incident_service import IncidentService
+from app.training.recommendation import seed_default_modules_and_slots
 
 logger = logging.getLogger("cat_decision_loop")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -55,9 +57,10 @@ async def lifespan(app: FastAPI):
     try:
         db = SessionLocal()
         IncidentService.sync_historical_task_incidents(db)
+        seed_default_modules_and_slots(db)
         db.close()
     except Exception as exc:
-        logger.warning("Historical incident sync encountered an issue: %s", exc)
+        logger.warning("Startup data sync/seed encountered an issue: %s", exc)
 
     yield
 
@@ -124,6 +127,7 @@ app.include_router(operators_router)
 app.include_router(dashboard_router)
 app.include_router(simulate_router)
 app.include_router(incidents_router)
+app.include_router(training_router)
 
 
 @app.get("/health", tags=["system"])

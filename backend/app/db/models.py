@@ -269,6 +269,9 @@ class TrainingRecommendation(Base):
     status = Column(String, default="pending", nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
+    operator = relationship("Operator")
+    elearning_module = relationship("ElearningModule")
+
 
 class InstructorSlot(Base):
     """An available instructor time-slot for booking."""
@@ -296,3 +299,6 @@ class InstructorBooking(Base):
     topic = Column(String, nullable=False)
     status = Column(String, default="confirmed", nullable=False)
     created_at = Column(DateTime, default=_utcnow, nullable=False)
+
+    operator = relationship("Operator")
+    instructor_slot = relationship("InstructorSlot")
