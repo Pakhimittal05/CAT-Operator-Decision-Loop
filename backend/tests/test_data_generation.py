@@ -193,10 +193,12 @@ def test_sqlite_file_database_integrity():
     from pathlib import Path
     from app.config import settings
 
-    db_path = Path("cat_decision_loop.db")
+    # Derive the real DB path from the config URL (sqlite:///path/to/file)
+    db_url = settings.database_url
+    db_path = Path(db_url.replace("sqlite:///", ""))
     assert db_path.exists(), f"Database file does not exist at {db_path.resolve()}"
 
-    engine = create_engine(settings.database_url, connect_args={"check_same_thread": False})
+    engine = create_engine(db_url, connect_args={"check_same_thread": False})
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
     assert EXPECTED_TABLES.issubset(tables)

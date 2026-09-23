@@ -293,7 +293,14 @@ export const OperatorProfile: React.FC = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-800/60 font-mono text-[11px]">
-              {historyData?.history.map((h) => (
+              {isHistoryLoading ? (
+                <tr>
+                  <td colSpan={10} className="py-6 text-center text-slate-400 font-sans">
+                    Loading task history...
+                  </td>
+                </tr>
+              ) : (
+                historyData?.history.map((h) => (
                 <tr key={h.task_instance_id} className="hover:bg-slate-800/40 transition-colors">
                   <td className="py-2 px-3 text-slate-400 font-semibold">#{h.task_instance_id}</td>
                   <td className="py-2 px-3 font-sans text-slate-200">{h.task_type}</td>
@@ -318,7 +325,7 @@ export const OperatorProfile: React.FC = () => {
                     {h.composite_magnitude.toFixed(2)}
                   </td>
                 </tr>
-              ))}
+              )))}
             </tbody>
           </table>
         </div>
