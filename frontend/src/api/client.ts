@@ -208,3 +208,70 @@ export const fetchPredictionExplanation = async (predictionId: number): Promise<
   const { data } = await apiClient.get(`/models/explain/${predictionId}`);
   return data;
 };
+
+// ── Phase 5: Unified Incidents & Safety Events (§13, §B, §C) ──────────────
+
+export type IncidentSource = 'seatbelt' | 'proximity' | 'deviation_anomaly' | 'manual';
+export type IncidentSeverity = 'low' | 'medium' | 'high' | 'critical';
+
+export interface IncidentItem {
+  id: number;
+  operator_id: number;
+  operator_name: string;
+  machine_id?: number | null;
+  machine_name?: string | null;
+  task_instance_id?: number | null;
+  source: IncidentSource;
+  severity: IncidentSeverity;
+  description?: string | null;
+  created_at: string;
+  is_synthetic: boolean;
+}
+
+export interface IncidentListResponse {
+  incidents: IncidentItem[];
+  total_count: number;
+  is_synthetic: boolean;
+}
+
+export interface IncidentStatsResponse {
+  total_incidents: number;
+  by_severity: Record<string, number>;
+  by_source: Record<string, number>;
+  is_synthetic: boolean;
+}
+
+export interface IncidentCreateRequest {
+  operator_id: number;
+  machine_id?: number | null;
+  task_instance_id?: number | null;
+  source?: IncidentSource;
+  severity: IncidentSeverity;
+  description: string;
+}
+
+export const fetchIncidents = async (params?: {
+  source?: string;
+  severity?: string;
+  operator_id?: number;
+  limit?: number;
+  offset?: number;
+}): Promise<IncidentListResponse> => {
+  const { data } = await apiClient.get<IncidentListResponse>('/incidents', { params });
+  return data;
+};
+
+export const fetchIncidentStats = async (): Promise<IncidentStatsResponse> => {
+  const { data } = await apiClient.get<IncidentStatsResponse>('/incidents/stats');
+  return data;
+};
+
+export const createIncident = async (payload: IncidentCreateRequest): Promise<IncidentItem> => {
+  const { data } = await apiClient.post<IncidentItem>('/incidents', payload);
+  return data;
+};
+
+export const evaluateTaskSafety = async (taskId: number): Promise<any> => {
+  const { data } = await apiClient.post(`/safety/evaluate-task/${taskId}`);
+  return data;
+};

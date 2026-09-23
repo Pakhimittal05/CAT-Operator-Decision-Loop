@@ -232,6 +232,10 @@ class IncidentEvent(Base):
 
     created_at = Column(DateTime, default=_utcnow, nullable=False)
 
+    operator = relationship("Operator")
+    machine = relationship("Machine")
+    task_instance = relationship("TaskInstance")
+
 
 # ── Training ───────────────────────────────────────────────────────────────
 

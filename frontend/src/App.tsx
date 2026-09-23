@@ -63,7 +63,7 @@ const Navigation: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-slate-400 hidden md:inline">
-              Hackathon Prototype — Phase 4
+              Hackathon Prototype — Phase 5
             </span>
             <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />

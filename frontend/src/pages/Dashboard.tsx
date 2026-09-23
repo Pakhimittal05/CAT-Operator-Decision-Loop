@@ -1,11 +1,33 @@
 import React, { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { fetchDailyTasks, fetchOperators } from '../api/client';
+import {
+  fetchDailyTasks,
+  fetchOperators,
+  fetchIncidents,
+  fetchIncidentStats,
+  createIncident,
+  IncidentSeverity,
+  IncidentSource,
+} from '../api/client';
 
 export const Dashboard: React.FC = () => {
+  const queryClient = useQueryClient();
   const [taskLimit, setTaskLimit] = useState(20);
 
+  // Safety Incident Feed Filters
+  const [sourceFilter, setSourceFilter] = useState<string>('all');
+  const [severityFilter, setSeverityFilter] = useState<string>('all');
+
+  // Manual Incident Modal State
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportOperatorId, setReportOperatorId] = useState<number>(1);
+  const [reportSeverity, setReportSeverity] = useState<IncidentSeverity>('medium');
+  const [reportSource, setReportSource] = useState<IncidentSource>('manual');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportError, setReportError] = useState<string | null>(null);
+
+  // Queries
   const {
     data: dashboardData,
     isLoading: isTasksLoading,
@@ -19,6 +41,50 @@ export const Dashboard: React.FC = () => {
     queryKey: ['operators'],
     queryFn: fetchOperators,
   });
+
+  const { data: incidentData, isLoading: isIncidentsLoading } = useQuery({
+    queryKey: ['incidents', sourceFilter, severityFilter],
+    queryFn: () =>
+      fetchIncidents({
+        source: sourceFilter !== 'all' ? sourceFilter : undefined,
+        severity: severityFilter !== 'all' ? severityFilter : undefined,
+        limit: 15,
+      }),
+  });
+
+  const { data: incidentStats } = useQuery({
+    queryKey: ['incidentStats'],
+    queryFn: fetchIncidentStats,
+  });
+
+  // Manual incident creation mutation
+  const createIncidentMutation = useMutation({
+    mutationFn: createIncident,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['incidents'] });
+      queryClient.invalidateQueries({ queryKey: ['incidentStats'] });
+      setIsReportModalOpen(false);
+      setReportDescription('');
+      setReportError(null);
+    },
+    onError: (err: any) => {
+      setReportError(err?.response?.data?.detail || 'Failed to record manual incident.');
+    },
+  });
+
+  const handleSubmitManualIncident = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reportDescription.trim()) {
+      setReportError('Description is required.');
+      return;
+    }
+    createIncidentMutation.mutate({
+      operator_id: reportOperatorId,
+      source: reportSource,
+      severity: reportSeverity,
+      description: reportDescription.trim(),
+    });
+  };
 
   if (isTasksLoading || isOpsLoading) {
     return (
@@ -48,6 +114,7 @@ export const Dashboard: React.FC = () => {
 
   const compliance = dashboardData?.compliance;
   const tasks = dashboardData?.tasks || [];
+  const incidents = incidentData?.incidents || [];
 
   return (
     <div className="space-y-6">
@@ -55,16 +122,22 @@ export const Dashboard: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-100 flex items-center gap-2">
-            <span>Operations Dashboard</span>
+            <span>Operations & Safety Dashboard</span>
             <span className="text-xs font-mono uppercase bg-slate-800 text-amber-400 px-2 py-0.5 rounded border border-slate-700">
               Live Feed
             </span>
           </h1>
           <p className="text-sm text-slate-400 mt-1">
-            Real-time daily task execution, machine telemetry, and site safety compliance
+            Real-time daily task execution, machine telemetry, and unified site safety compliance
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setIsReportModalOpen(true)}
+            className="px-3 py-1.5 bg-rose-500 hover:bg-rose-400 text-slate-950 font-bold text-xs rounded-lg transition-colors shadow-sm flex items-center gap-1.5"
+          >
+            <span>+ Log Safety Incident</span>
+          </button>
           <Link
             to="/operators/1"
             className="px-3 py-1.5 bg-amber-500 text-slate-950 font-semibold text-xs rounded-lg hover:bg-amber-400 transition-colors shadow-sm flex items-center gap-1.5"
@@ -118,12 +191,15 @@ export const Dashboard: React.FC = () => {
         </div>
 
         <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
-          <div className="text-xs text-slate-400 font-medium">Safety Violations Logged</div>
+          <div className="text-xs text-slate-400 font-medium flex justify-between">
+            <span>Total Logged Incidents</span>
+            <span className="text-rose-400 font-bold">{incidentStats?.total_incidents || compliance?.safety_violations_count || 0}</span>
+          </div>
           <div className="text-2xl font-bold text-rose-400 mt-1">
-            {compliance?.safety_violations_count || 0}
+            {incidentStats?.total_incidents || compliance?.safety_violations_count || 0}
           </div>
           <div className="text-[11px] text-slate-500 mt-1">
-            Seatbelt unlatched or proximity &lt; 5.0m
+            Crit: {incidentStats?.by_severity?.critical || 0} | High: {incidentStats?.by_severity?.high || 0} | Med: {incidentStats?.by_severity?.medium || 0}
           </div>
         </div>
       </div>
@@ -163,6 +239,138 @@ export const Dashboard: React.FC = () => {
             </Link>
           ))}
         </div>
+      </div>
+
+      {/* Unified Safety Incident Feed (§2, §13, §F) */}
+      <div className="bg-slate-900/80 border border-slate-800 rounded-xl p-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800 pb-3 mb-4">
+          <div>
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-100 uppercase tracking-wide">
+                Unified Safety Incident Feed
+              </h2>
+              <span className="bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] px-2 py-0.5 rounded-full font-mono font-bold">
+                {incidentData?.total_count || 0} Events
+              </span>
+            </div>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Deterministic rule engine detections (seatbelt &amp; proximity) and supervisor logs
+            </p>
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
+              <span className="text-slate-500 px-1 font-medium">Source:</span>
+              {['all', 'seatbelt', 'proximity', 'manual'].map((src) => (
+                <button
+                  key={src}
+                  onClick={() => setSourceFilter(src)}
+                  className={`px-2 py-0.5 rounded capitalize transition-colors ${
+                    sourceFilter === src
+                      ? 'bg-amber-500 text-slate-950 font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {src}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-1 bg-slate-950 p-1 rounded-lg border border-slate-800 text-[11px]">
+              <span className="text-slate-500 px-1 font-medium">Severity:</span>
+              {['all', 'critical', 'high', 'medium', 'low'].map((sev) => (
+                <button
+                  key={sev}
+                  onClick={() => setSeverityFilter(sev)}
+                  className={`px-2 py-0.5 rounded capitalize transition-colors ${
+                    severityFilter === sev
+                      ? 'bg-rose-500 text-white font-bold'
+                      : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {sev}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Incident List */}
+        {isIncidentsLoading ? (
+          <div className="py-8 text-center text-slate-500 text-xs">Loading safety incidents...</div>
+        ) : incidents.length === 0 ? (
+          <div className="py-8 text-center text-slate-500 text-xs bg-slate-950/40 rounded-lg border border-slate-800/60">
+            No safety incidents match the selected filter criteria.
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-[380px] overflow-y-auto pr-1">
+            {incidents.map((inc) => (
+              <div
+                key={inc.id}
+                className={`p-3 rounded-lg border transition-all text-xs flex flex-col justify-between ${
+                  inc.severity === 'critical'
+                    ? 'bg-rose-950/20 border-rose-600/40 text-rose-200'
+                    : inc.severity === 'high'
+                    ? 'bg-orange-950/20 border-orange-600/40 text-orange-200'
+                    : inc.severity === 'medium'
+                    ? 'bg-amber-950/20 border-amber-600/40 text-amber-200'
+                    : 'bg-slate-950/40 border-slate-800 text-slate-300'
+                }`}
+              >
+                <div>
+                  <div className="flex items-center justify-between gap-2 mb-1.5">
+                    <span
+                      className={`text-[10px] font-mono uppercase px-1.5 py-0.5 rounded font-bold border ${
+                        inc.source === 'seatbelt'
+                          ? 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                          : inc.source === 'proximity'
+                          ? 'bg-rose-500/20 text-rose-300 border-rose-500/30'
+                          : 'bg-blue-500/20 text-blue-300 border-blue-500/30'
+                      }`}
+                    >
+                      {inc.source === 'seatbelt' && '⛑ Seatbelt'}
+                      {inc.source === 'proximity' && '⚠️ Proximity'}
+                      {inc.source === 'manual' && '📝 Manual Report'}
+                      {inc.source === 'deviation_anomaly' && '⚡ Anomaly'}
+                    </span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded font-bold uppercase ${
+                        inc.severity === 'critical'
+                          ? 'bg-rose-600 text-white animate-pulse'
+                          : inc.severity === 'high'
+                          ? 'bg-rose-500/30 text-rose-300'
+                          : inc.severity === 'medium'
+                          ? 'bg-amber-500/30 text-amber-300'
+                          : 'bg-slate-700 text-slate-300'
+                      }`}
+                    >
+                      {inc.severity}
+                    </span>
+                  </div>
+
+                  <p className="text-slate-200 text-[11px] leading-relaxed line-clamp-2 mt-1">
+                    {inc.description || 'Safety incident registered.'}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between text-[10px] text-slate-400 border-t border-slate-800/80 pt-2 mt-2">
+                  <Link
+                    to={`/operators/${inc.operator_id}`}
+                    className="text-amber-400 hover:underline font-semibold"
+                  >
+                    {inc.operator_name}
+                  </Link>
+                  <div className="flex items-center gap-1.5 font-mono text-[9px] text-slate-500">
+                    {inc.machine_name && <span>{inc.machine_name}</span>}
+                    <span>•</span>
+                    <span>{new Date(inc.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Daily Tasks Feed Table */}
@@ -245,6 +453,107 @@ export const Dashboard: React.FC = () => {
           </table>
         </div>
       </div>
+
+      {/* Manual Incident Report Modal */}
+      {isReportModalOpen && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full p-6 shadow-2xl relative">
+            <div className="flex items-center justify-between mb-4 border-b border-slate-800 pb-3">
+              <h3 className="text-lg font-bold text-slate-100 flex items-center gap-2">
+                <span>⚠️</span>
+                <span>Log Safety Incident</span>
+              </h3>
+              <button
+                onClick={() => setIsReportModalOpen(false)}
+                className="text-slate-400 hover:text-slate-200 text-lg font-bold"
+              >
+                &times;
+              </button>
+            </div>
+
+            {reportError && (
+              <div className="mb-4 p-2.5 bg-rose-500/20 border border-rose-500/40 rounded text-rose-300 text-xs">
+                {reportError}
+              </div>
+            )}
+
+            <form onSubmit={handleSubmitManualIncident} className="space-y-4 text-xs">
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Involved Operator</label>
+                <select
+                  value={reportOperatorId}
+                  onChange={(e) => setReportOperatorId(Number(e.target.value))}
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-400"
+                >
+                  {operators?.map((op) => (
+                    <option key={op.id} value={op.id}>
+                      {op.name} ({op.derived_label})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Source Category</label>
+                  <select
+                    value={reportSource}
+                    onChange={(e) => setReportSource(e.target.value as IncidentSource)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="manual">Manual Supervisor Log</option>
+                    <option value="seatbelt">Seatbelt Violation</option>
+                    <option value="proximity">Proximity Hazard</option>
+                    <option value="deviation_anomaly">Telemetry Anomaly</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-300 font-medium mb-1">Severity</label>
+                  <select
+                    value={reportSeverity}
+                    onChange={(e) => setReportSeverity(e.target.value as IncidentSeverity)}
+                    className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-400"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-300 font-medium mb-1">Incident Description</label>
+                <textarea
+                  rows={3}
+                  value={reportDescription}
+                  onChange={(e) => setReportDescription(e.target.value)}
+                  placeholder="Detail the observation or safety hazard observed..."
+                  className="w-full bg-slate-800 border border-slate-700 rounded px-3 py-2 text-slate-200 focus:outline-none focus:border-amber-400"
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setIsReportModalOpen(false)}
+                  className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-medium transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={createIncidentMutation.isPending}
+                  className="px-4 py-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold rounded transition-colors shadow-sm disabled:opacity-50"
+                >
+                  {createIncidentMutation.isPending ? 'Logging...' : 'Submit Incident Event'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -19,11 +19,14 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.db.session import SessionLocal
 from app.deviation_engine.deviation import load_reference_artifacts
 from app.prediction.task_time_model import load_task_time_artifacts
 from app.routers.dashboard import router as dashboard_router
+from app.routers.incidents import router as incidents_router
 from app.routers.operators import router as operators_router
 from app.routers.simulate import router as simulate_router
+from app.safety.incident_service import IncidentService
 
 logger = logging.getLogger("cat_decision_loop")
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
@@ -33,7 +36,7 @@ _MODELS_LOADED: bool = False
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Lifespan context manager — loads ML models at startup."""
+    """Lifespan context manager — loads ML models and performs idempotent safety backfill."""
     global _MODELS_LOADED
     try:
         load_reference_artifacts()
@@ -47,6 +50,15 @@ async def lifespan(app: FastAPI):
             exc,
         )
         _MODELS_LOADED = False
+
+    # Idempotent historical incident sync from existing task telemetry
+    try:
+        db = SessionLocal()
+        IncidentService.sync_historical_task_incidents(db)
+        db.close()
+    except Exception as exc:
+        logger.warning("Historical incident sync encountered an issue: %s", exc)
+
     yield
 
 
@@ -111,6 +123,7 @@ async def handle_http_exception(request: Request, exc: HTTPException):
 app.include_router(operators_router)
 app.include_router(dashboard_router)
 app.include_router(simulate_router)
+app.include_router(incidents_router)
 
 
 @app.get("/health", tags=["system"])
