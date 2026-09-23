@@ -1,13 +1,16 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   fetchSimulationOptions,
   runSimulation,
+  triggerProcessBOutcome,
   SimulationResponse,
   SimulationRequest,
 } from '../api/client';
 
 export const WhatIfSimulator: React.FC = () => {
+  const navigate = useNavigate();
   const [selectedOperatorId, setSelectedOperatorId] = useState<number>(1);
   const [selectedMachineId, setSelectedMachineId] = useState<number>(1);
   const [selectedTaskId, setSelectedTaskId] = useState<number>(1);
@@ -43,6 +46,15 @@ export const WhatIfSimulator: React.FC = () => {
     mutationFn: (req: SimulationRequest) => runSimulation(req),
   });
 
+  // Mutation to execute Process B and close the loop
+  const executeProcessBMutation = useMutation({
+    mutationFn: ({ predId, seed }: { predId: number; seed?: number }) =>
+      triggerProcessBOutcome(predId, seed),
+    onSuccess: (data) => {
+      navigate(`/compare/${data.prediction_id}`);
+    },
+  });
+
   const handleRunSimulation = () => {
     simulationMutation.mutate({
       operator_id: selectedOperatorId,
@@ -50,6 +62,12 @@ export const WhatIfSimulator: React.FC = () => {
       task_type_id: selectedTaskId,
       weather: selectedWeather,
     });
+  };
+
+  const handleExecuteProcessB = (seed?: number) => {
+    if (result) {
+      executeProcessBMutation.mutate({ predId: result.prediction_id, seed });
+    }
   };
 
   const selectedOperator = options?.operators.find((o) => o.id === selectedOperatorId);
@@ -384,6 +402,50 @@ export const WhatIfSimulator: React.FC = () => {
               </div>
             </div>
           )}
+
+          {/* ── Phase 7: Closed-Loop Real-World Execution CTA Banner (§12, §15) ── */}
+          <div className="bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-900 border border-amber-500/40 p-5 rounded-xl space-y-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded font-black bg-amber-400 text-slate-950 uppercase">
+                    Closed Loop Feedback
+                  </span>
+                  <span className="text-xs font-mono text-amber-300">ACT & LEARN</span>
+                </div>
+                <h3 className="text-base font-bold text-slate-100">
+                  Execute Scenario in Field Telemetry (Process B)
+                </h3>
+                <p className="text-xs text-slate-400 max-w-2xl mt-0.5">
+                  Send this simulated task to independent Stochastic Process B to generate actual operational telemetry,
+                  compute observed deviation, and update operator EWMA performance state.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => handleExecuteProcessB(42)}
+                  disabled={executeProcessBMutation.isPending}
+                  className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs shadow-md transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <span>⚡ Run Demo Execution</span>
+                </button>
+                <button
+                  onClick={() => handleExecuteProcessB(undefined)}
+                  disabled={executeProcessBMutation.isPending}
+                  className="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-medium text-xs transition-colors flex items-center gap-1.5 whitespace-nowrap"
+                >
+                  <span>🎲 Stochastic Live Run</span>
+                </button>
+              </div>
+            </div>
+
+            {executeProcessBMutation.isPending && (
+              <div className="text-xs text-amber-400 font-mono animate-pulse pt-1">
+                Executing Process B actuals and updating operator state...
+              </div>
+            )}
+          </div>
 
           {/* Model Explainability: Probable Contributing Factors (§24) */}
           <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl">

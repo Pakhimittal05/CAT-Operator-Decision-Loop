@@ -6,6 +6,7 @@ import { Dashboard } from './pages/Dashboard';
 import { OperatorProfile } from './pages/OperatorProfile';
 import { WhatIfSimulator } from './pages/WhatIfSimulator';
 import { AnomalyFeed } from './pages/AnomalyFeed';
+import { PredictedVsActual } from './pages/PredictedVsActual';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +24,7 @@ const Navigation: React.FC = () => {
     { to: '/', label: 'Operations Dashboard' },
     { to: '/operators/1', label: 'Operator Dynamic State' },
     { to: '/simulate', label: 'What-If Simulator' },
+    { to: '/compare', label: 'Predicted vs Actual' },
     { to: '/coaching', label: 'Coaching & Training' },
   ];
 
@@ -67,7 +69,7 @@ const Navigation: React.FC = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[11px] text-slate-400 hidden md:inline">
-              Hackathon Prototype — Phase 6
+              Hackathon Prototype — Phase 7
             </span>
             <div className="flex items-center gap-1.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded text-[10px] font-mono">
               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
@@ -99,6 +101,8 @@ export const App: React.FC = () => {
               <Route path="/operators" element={<OperatorProfile />} />
               <Route path="/operators/:id" element={<OperatorProfile />} />
               <Route path="/simulate" element={<WhatIfSimulator />} />
+              <Route path="/compare" element={<PredictedVsActual />} />
+              <Route path="/compare/:predictionId" element={<PredictedVsActual />} />
               <Route path="/coaching" element={<AnomalyFeed />} />
               <Route path="/anomalies" element={<AnomalyFeed />} />
             </Routes>

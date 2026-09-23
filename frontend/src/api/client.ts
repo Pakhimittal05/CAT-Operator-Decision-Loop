@@ -427,3 +427,125 @@ export const fetchOperatorBookings = async (
   );
   return data;
 };
+
+// ── Phase 7 Predicted vs Actual & Feedback Loop (§4, §15) ─────────────────
+
+export interface OperatorStateSummary {
+  operator_id: number;
+  composite_score: number;
+  derived_label: string;
+  trend_direction: string;
+  confidence: number;
+  efficiency_score: number;
+  idling_score: number;
+  duration_score: number;
+  load_cycle_score: number;
+  safety_score: number;
+  sample_count: number;
+}
+
+export interface ComparisonIncidentSummary {
+  id: number;
+  source: string;
+  severity: string;
+  description?: string | null;
+}
+
+export interface ComparisonResponse {
+  prediction_id: number;
+  task_instance_id: number;
+  operator_id: number;
+  operator_name: string;
+  machine_id: number;
+  machine_name: string;
+  task_type_id: number;
+  task_type_name: string;
+  weather: string;
+
+  predicted_duration_minutes: number;
+  p10_minutes: number;
+  p90_minutes: number;
+  actual_duration_minutes: number;
+  duration_difference_minutes: number;
+  absolute_error_minutes: number;
+  percentage_error: number;
+  is_within_interval: boolean;
+
+  observed_telemetry: {
+    duration_minutes: number;
+    idle_seconds: number;
+    load_cycles: number;
+    efficiency_score: number;
+    seatbelt_engaged: boolean;
+    min_proximity_distance: number;
+  };
+  deviation_vector: Record<string, number>;
+  composite_magnitude: number;
+
+  state_before: OperatorStateSummary;
+  state_after: OperatorStateSummary;
+  composite_score_delta: number;
+
+  seatbelt_engaged: boolean;
+  min_proximity_distance: number;
+  incidents_recorded: ComparisonIncidentSummary[];
+
+  is_synthetic: boolean;
+  executed_at: string;
+}
+
+export interface ComparisonListItem {
+  prediction_id: number;
+  task_instance_id: number;
+  operator_name: string;
+  machine_name: string;
+  task_type_name: string;
+  weather: string;
+  predicted_duration_minutes: number;
+  actual_duration_minutes: number;
+  duration_difference_minutes: number;
+  absolute_error_minutes: number;
+  percentage_error: number;
+  is_within_interval: boolean;
+  composite_score_delta: number;
+  executed_at: string;
+  is_synthetic: boolean;
+}
+
+export interface ComparisonListResponse {
+  comparisons: ComparisonListItem[];
+  total_count: number;
+  is_synthetic: boolean;
+}
+
+export const triggerProcessBOutcome = async (
+  predictionId: number,
+  seed?: number
+): Promise<ComparisonResponse> => {
+  const payload = seed !== undefined ? { seed } : {};
+  const { data } = await apiClient.post<ComparisonResponse>(
+    `/simulate/${predictionId}/generate-actual`,
+    payload
+  );
+  return data;
+};
+
+export const fetchComparison = async (
+  predictionId: number
+): Promise<ComparisonResponse> => {
+  const { data } = await apiClient.get<ComparisonResponse>(
+    `/simulate/${predictionId}/comparison`
+  );
+  return data;
+};
+
+export const fetchRecentComparisons = async (
+  limit = 15,
+  offset = 0
+): Promise<ComparisonListResponse> => {
+  const { data } = await apiClient.get<ComparisonListResponse>(
+    '/simulate/comparisons',
+    { params: { limit, offset } }
+  );
+  return data;
+};

@@ -92,3 +92,112 @@ class SimulationOptionsResponse(BaseModel):
     tasks: List[TaskCatalogOption]
     weather_options: List[str]
     is_synthetic: bool = True
+
+
+# ── Phase 7: Closed Loop & Predicted vs Actual Schemas ─────────────────────
+
+
+class ProcessBTriggerRequest(BaseModel):
+    """Optional configuration for triggering Process B actual outcome."""
+
+    seed: Optional[int] = Field(
+        None,
+        description="Optional RNG seed for deterministic hackathon demonstration. If omitted, uses stochastic system entropy.",
+    )
+
+
+class OperatorStateSummary(BaseModel):
+    """Snapshot of dynamic operator state for before/after comparison."""
+
+    operator_id: int
+    composite_score: float
+    derived_label: str
+    trend_direction: str
+    confidence: float
+    efficiency_score: float
+    idling_score: float
+    duration_score: float
+    load_cycle_score: float
+    safety_score: float
+    sample_count: int
+
+
+class IncidentSummary(BaseModel):
+    """Summary of safety incident recorded during task execution."""
+
+    id: int
+    source: str
+    severity: str
+    description: Optional[str] = None
+
+
+class ComparisonResponse(BaseModel):
+    """Comprehensive Predicted vs Actual comparison response (§4, §15)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    prediction_id: int
+    task_instance_id: int
+    operator_id: int
+    operator_name: str
+    machine_id: int
+    machine_name: str
+    task_type_id: int
+    task_type_name: str
+    weather: str
+
+    # Duration comparison
+    predicted_duration_minutes: float
+    p10_minutes: float
+    p90_minutes: float
+    actual_duration_minutes: float
+    duration_difference_minutes: float  # actual - predicted
+    absolute_error_minutes: float
+    percentage_error: float
+    is_within_interval: bool
+
+    # Observed telemetry
+    observed_telemetry: dict
+    deviation_vector: dict[str, float]
+    composite_magnitude: float
+
+    # Operator state feedback
+    state_before: OperatorStateSummary
+    state_after: OperatorStateSummary
+    composite_score_delta: float
+
+    # Safety metrics
+    seatbelt_engaged: bool
+    min_proximity_distance: float
+    incidents_recorded: List[IncidentSummary]
+
+    is_synthetic: bool = True
+    executed_at: str
+
+
+class ComparisonListItem(BaseModel):
+    """Summary item for simulation execution history table."""
+
+    prediction_id: int
+    task_instance_id: int
+    operator_name: str
+    machine_name: str
+    task_type_name: str
+    weather: str
+    predicted_duration_minutes: float
+    actual_duration_minutes: float
+    duration_difference_minutes: float
+    absolute_error_minutes: float
+    percentage_error: float
+    is_within_interval: bool
+    composite_score_delta: float
+    executed_at: str
+    is_synthetic: bool = True
+
+
+class ComparisonListResponse(BaseModel):
+    """Paginated list of completed simulation comparisons."""
+
+    comparisons: List[ComparisonListItem]
+    total_count: int
+    is_synthetic: bool = True

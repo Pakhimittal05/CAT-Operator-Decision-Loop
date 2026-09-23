@@ -21,13 +21,21 @@ from app.prediction.task_time_model import (
     load_task_time_artifacts,
 )
 from app.schemas.simulate import (
+    ComparisonListResponse,
+    ComparisonResponse,
     ContributingFactor,
     MachineOption,
     OperatorOption,
+    ProcessBTriggerRequest,
     SimulationOptionsResponse,
     SimulationRequest,
     SimulationResponse,
     TaskCatalogOption,
+)
+from app.simulation.feedback_service import (
+    execute_process_b_for_prediction,
+    get_prediction_comparison,
+    list_simulation_comparisons,
 )
 from app.simulation.whatif import ALLOWED_WEATHER, run_whatif_simulation
 
@@ -159,3 +167,55 @@ def get_prediction_explanation(
         "note": "Probabilistic attribution based on gradient boosting feature importances. Never implies causality.",
         "is_synthetic": True,
     }
+
+
+# ── Phase 7: Closed Loop & Predicted vs Actual Endpoints (§C, §15) ─────────
+
+
+@router.post(
+    "/simulate/{prediction_id}/generate-actual",
+    response_model=ComparisonResponse,
+    status_code=status.HTTP_200_OK,
+)
+def generate_actual_outcome(
+    prediction_id: int,
+    payload: ProcessBTriggerRequest | None = None,
+    db: Session = Depends(get_db),
+) -> ComparisonResponse:
+    """Trigger Process B independent stochastic actual outcome for a simulated prediction.
+
+    Executes closed loop:
+      - Process B telemetry generation (log-normal duration noise, hidden fatigue factor)
+      - Creates actual TaskInstance (source_process='B')
+      - Computes standardized 5D deviation vector
+      - Evaluates safety events via IncidentService
+      - Recalibrates operator EWMA performance state
+      - Returns complete Predicted vs Actual comparison
+    """
+    seed = payload.seed if payload else None
+    return execute_process_b_for_prediction(session=db, prediction_id=prediction_id, seed=seed)
+
+
+@router.get(
+    "/simulate/{prediction_id}/comparison",
+    response_model=ComparisonResponse,
+)
+def get_comparison(
+    prediction_id: int,
+    db: Session = Depends(get_db),
+) -> ComparisonResponse:
+    """Retrieve predicted vs actual comparison for an already executed prediction."""
+    return get_prediction_comparison(session=db, prediction_id=prediction_id)
+
+
+@router.get(
+    "/simulate/comparisons",
+    response_model=ComparisonListResponse,
+)
+def list_comparisons(
+    limit: int = 15,
+    offset: int = 0,
+    db: Session = Depends(get_db),
+) -> ComparisonListResponse:
+    """Retrieve history of completed simulation executions with summary comparison cards."""
+    return list_simulation_comparisons(session=db, limit=limit, offset=offset)
